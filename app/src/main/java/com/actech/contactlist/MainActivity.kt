@@ -23,10 +23,58 @@ class MainActivity : AppCompatActivity() {
         val contacts: RecyclerView = findViewById(R.id.contactList)
         contacts.layoutManager = LinearLayoutManager(this)
 
-        val lang = arrayListOf("Java", "Javascript", "c#", "python", "ruby", "django", "haskell", "html", "go", "mango", "apple")
+        val lang = arrayOf("Java", "Javascript", "c#", "python", "ruby", "django", "haskell", "html", "go", "mango", "apple")
 
-        contacts.adapter = ContactsAdapter(lang)
+        var mycontacts: ArrayList<String>?=null
+        if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS)
+        == PackageManager.PERMISSION_GRANTED)
+            mycontacts = getAllContacts()
+        else
+            requestPermission()
+
+        contacts.adapter = ContactsAdapter(mycontacts)
     }
 
+    private fun requestPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.READ_CONTACTS)) {
+            Toast.makeText(applicationContext,"Please fckng allow this permission !",Toast.LENGTH_SHORT).show()
+            // show UI part if you want here to show some rationale !!!
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.READ_CONTACTS),
+                    REQUEST_READ_CONTACTS);
+        }
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.READ_CONTACTS)) {
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_CONTACTS),
+                    REQUEST_READ_CONTACTS);
+        }
+    }
 
+    private fun getAllContacts(): ArrayList<String>{
+        val names =  ArrayList<String>()
+        val cr: ContentResolver = contentResolver
+        val cursor: Cursor? = cr.query(ContactsContract.Contacts.CONTENT_URI,null, null, null, null)
+
+        if( (if(cursor != null) cursor.count else 0) > 0){
+            while( cursor != null && cursor.moveToNext()){
+                val id = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID))
+                val name = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME))
+                names.add(name)
+
+                if( cursor.getInt(cursor.getColumnIndex( ContactsContract.Contacts.HAS_PHONE_NUMBER)) > 0) {
+                    val pcur: Cursor? = cr.query( ContactsContract.CommonDataKinds.Phone.CONTENT_URI ,null,
+                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" =? ",
+                            arrayOf(id), null)
+
+                    while( pcur!!.moveToNext()) {
+                        val phone = pcur.getString(pcur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER))
+                    }
+                    pcur.close()
+                }
+            }
+        }
+        if (cursor != null) cursor.close()
+
+        return names
+    }
 }
